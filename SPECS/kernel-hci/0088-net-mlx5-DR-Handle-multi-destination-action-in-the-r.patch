@@ -1,0 +1,127 @@
+From 3b81bcbaee28213ba7e6061c523db918c594ad67 Mon Sep 17 00:00:00 2001
+From: Erez Shitrit <erezsh@nvidia.com>
+Date: Mon, 28 Aug 2023 14:37:12 +0300
+Subject: [PATCH 88/88] net/mlx5: DR, Handle multi destination action in the
+ right order
+
+Whenever we have few destinations from Flow-table type we need to put
+the one that goes to the wire to be the last one.
+
+We are using FW in order to get iterator, the FW uses RX for the first
+destinations and TX for the last destination, if we want the packet to
+be directed to the wire it should be done in the TX path and not in the
+RX.
+The code now checks if the FT is directed to the wire and if so puts it
+as the last destination.
+
+Conflicts:
+ - drivers/net/ethernet/mellanox/mlx5/core/steering/fs_dr.c
+   Due to missing commit 
+   0a8c20e23ff2 ("net/mlx5: DR, Rework is_fw_table function")
+   Some context diff exists and include statement for dr_types.h is missing.
+   Add it to fix a build issue:
+   error: dereferencing pointer to incomplete type ‘struct mlx5dr_action’
+
+Signed-off-by: Erez Shitrit <erezsh@nvidia.com>
+Reviewed-by: Moshe Shemesh <moshe@nvidia.com>
+Reviewed-by: Yevgeny Kliteynik <kliteyn@nvidia.com>
+Signed-off-by: Saeed Mahameed <saeedm@nvidia.com>
+---
+ .../mellanox/mlx5/core/steering/dr_action.c   | 22 +++++++++++++++++--
+ .../mellanox/mlx5/core/steering/dr_types.h    |  1 +
+ .../mellanox/mlx5/core/steering/fs_dr.c       |  9 +++++++-
+ 3 files changed, 29 insertions(+), 3 deletions(-)
+
+--- a/drivers/net/ethernet/mellanox/mlx5/core/steering/dr_action.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/steering/dr_action.c
+@@ -882,13 +882,16 @@ mlx5dr_action_create_mult_dest_tbl(struc
+ 				   bool ignore_flow_level,
+ 				   u32 flow_source)
+ {
++	struct mlx5dr_cmd_flow_destination_hw_info tmp_hw_dest;
+ 	struct mlx5dr_cmd_flow_destination_hw_info *hw_dests;
+ 	struct mlx5dr_action **ref_actions;
+ 	struct mlx5dr_action *action;
+ 	bool reformat_req = false;
++	bool is_ft_wire = false;
+ 	u16 num_dst_ft = 0;
+ 	u32 num_of_ref = 0;
+ 	u32 ref_act_cnt;
++	u16 last_dest;
+ 	int ret;
+ 	int i;
+ 
+@@ -937,10 +940,15 @@ mlx5dr_action_create_mult_dest_tbl(struc
+ 			}
+ 			num_dst_ft++;
+ 			hw_dests[i].type = MLX5_FLOW_DESTINATION_TYPE_FLOW_TABLE;
+-			if (dest_action->dest_tbl->is_fw_tbl)
++			if (dest_action->dest_tbl->is_fw_tbl) {
+ 				hw_dests[i].ft_id = dest_action->dest_tbl->fw_tbl.id;
+-			else
++			} else {
+ 				hw_dests[i].ft_id = dest_action->dest_tbl->tbl->table_id;
++				if (dest_action->dest_tbl->is_wire_ft) {
++					is_ft_wire = true;
++					last_dest = i;
++				}
++			}
+ 			break;
+ 
+ 		default:
+@@ -949,6 +957,16 @@ mlx5dr_action_create_mult_dest_tbl(struc
+ 		}
+ 	}
+ 
++	/* In multidest, the FW does the iterator in the RX except of the last
++	 * one that done in the TX.
++	 * So, if one of the ft target is wire, put it at the end of the dest list.
++	 */
++	if (is_ft_wire && num_dst_ft > 1) {
++		tmp_hw_dest = hw_dests[last_dest];
++		hw_dests[last_dest] = hw_dests[num_of_dests - 1];
++		hw_dests[num_of_dests - 1] = tmp_hw_dest;
++	}
++
+ 	action = dr_action_create_generic(DR_ACTION_TYP_FT);
+ 	if (!action)
+ 		goto free_ref_actions;
+--- a/drivers/net/ethernet/mellanox/mlx5/core/steering/dr_types.h
++++ b/drivers/net/ethernet/mellanox/mlx5/core/steering/dr_types.h
+@@ -1002,6 +1002,7 @@ struct mlx5dr_action_sampler {
+ 
+ struct mlx5dr_action_dest_tbl {
+ 	u8 is_fw_tbl:1;
++	u8 is_wire_ft:1;
+ 	union {
+ 		struct mlx5dr_table *tbl;
+ 		struct {
+--- a/drivers/net/ethernet/mellanox/mlx5/core/steering/fs_dr.c
++++ b/drivers/net/ethernet/mellanox/mlx5/core/steering/fs_dr.c
+@@ -7,6 +7,7 @@
+ #include "fs_cmd.h"
+ #include "mlx5dr.h"
+ #include "fs_dr.h"
++#include "dr_types.h"
+ 
+ static bool mlx5_dr_is_fw_table(u32 flags)
+ {
+@@ -207,10 +208,17 @@ static struct mlx5dr_action *create_ft_a
+ 					      struct mlx5_flow_rule *dst)
+ {
+ 	struct mlx5_flow_table *dest_ft = dst->dest_attr.ft;
++	struct mlx5dr_action *tbl_action;
+ 
+ 	if (mlx5_dr_is_fw_table(dest_ft->flags))
+ 		return mlx5dr_action_create_dest_flow_fw_table(domain, dest_ft);
+-	return mlx5dr_action_create_dest_table(dest_ft->fs_dr_table.dr_table);
++
++	tbl_action = mlx5dr_action_create_dest_table(dest_ft->fs_dr_table.dr_table);
++	if (tbl_action)
++		tbl_action->dest_tbl->is_wire_ft =
++			dest_ft->flags & MLX5_FLOW_TABLE_UPLINK_VPORT ? 1 : 0;
++
++	return tbl_action;
+ }
+ 
+ static struct mlx5dr_action *create_action_push_vlan(struct mlx5dr_domain *domain,
