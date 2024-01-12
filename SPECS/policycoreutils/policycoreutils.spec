@@ -99,15 +99,11 @@ chmod 0755 %{buildroot}%{_bindir}/newrole
 # Systemd
 rm -rf %{buildroot}/%{_sysconfdir}/rc.d/init.d/restorecond
 
-rm -f %{buildroot}%{_mandir}/ru/man8/genhomedircon.8.gz
-rm -f %{buildroot}%{_mandir}/ru/man8/open_init_pty.8*
-rm -f %{buildroot}%{_mandir}/ru/man8/semodule_deps.8.gz
-rm -f %{buildroot}%{_mandir}/man8/open_init_pty.8
-rm -f %{buildroot}%{_sbindir}/open_init_pty
-rm -f %{buildroot}%{_sbindir}/run_init
-rm -f %{buildroot}%{_mandir}/ru/man8/run_init.8*
-rm -f %{buildroot}%{_mandir}/man8/run_init.8*
-rm -f %{buildroot}%{_sysconfdir}/pam.d/run_init*
+rm -f %{buildroot}/usr/share/man/man8/open_init_pty.8
+rm -f %{buildroot}/usr/sbin/open_init_pty
+rm -f %{buildroot}/usr/sbin/run_init
+rm -f %{buildroot}/usr/share/man/man8/run_init.8*
+rm -f %{buildroot}/etc/pam.d/run_init*
 
 mkdir   -m 755 -p %{buildroot}/%{generatorsdir}
 mkdir   -m 755 -p %{buildroot}/%{_unitdir}
@@ -174,13 +170,9 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_bindir}/audit2allow
 %{_bindir}/audit2why
 %{_mandir}/man1/audit2allow.1*
-%{_mandir}/ru/man1/audit2allow.1*
 %{_mandir}/man1/audit2why.1*
-%{_mandir}/ru/man1/audit2why.1*
 %{_mandir}/man8/chcat.8*
-%{_mandir}/ru/man8/chcat.8*
 %{_mandir}/man8/semanage*.8*
-%{_mandir}/ru/man8/semanage*.8*
 %{_datadir}/bash-completion/completions/semanage
 
 %files python3
@@ -215,7 +207,6 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_sharedstatedir}/sepolgen/perm_map
 %{_bindir}/sepolicy
 %{_mandir}/man8/sepolgen.8*
-%{_mandir}/ru/man8/sepolgen.8*
 %{_mandir}/man8/sepolicy-booleans.8*
 %{_mandir}/man8/sepolicy-generate.8*
 %{_mandir}/man8/sepolicy-interface.8*
@@ -224,14 +215,11 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_mandir}/man8/sepolicy-communicate.8*
 %{_mandir}/man8/sepolicy-manpage.8*
 %{_mandir}/man8/sepolicy-transition.8*
-%{_mandir}/ru/man8/sepolicy*.8*
 %{_usr}/share/bash-completion/completions/sepolicy
 
 %files newrole
-%license policycoreutils/COPYING
 %attr(0755,root,root) %caps(cap_dac_read_search,cap_setpcap,cap_audit_write,cap_sys_admin,cap_fowner,cap_chown,cap_dac_override=pe) %{_bindir}/newrole
 %{_mandir}/man1/newrole.1.gz
-%{_mandir}/ru/man1/newrole.1.gz
 %config(noreplace) %{_sysconfdir}/pam.d/newrole
 
 %files restorecond
@@ -244,41 +232,12 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_sysconfdir}/xdg/autostart/restorecond.desktop
 %{_datadir}/dbus-1/services/org.selinux.Restorecond.service
 %{_mandir}/man8/restorecond.8*
-%{_mandir}/ru/man8/restorecond.8*
-%{_mandir}/ru/man1/audit2why.1*
-%{_mandir}/ru/man1/newrole.1*
-%{_mandir}/ru/man5/selinux_config.5*
-%{_mandir}/ru/man5/sestatus.conf.5*
-%{_mandir}/ru/man8/genhomedircon.8*
-%{_mandir}/ru/man8/restorecon_xattr.8*
-%{_mandir}/ru/man8/semanage-boolean.8*
-%{_mandir}/ru/man8/semanage-dontaudit.8*
-%{_mandir}/ru/man8/semanage-export.8*
-%{_mandir}/ru/man8/semanage-fcontext.8*
-%{_mandir}/ru/man8/semanage-ibendport.8*
-%{_mandir}/ru/man8/semanage-ibpkey.8*
-%{_mandir}/ru/man8/semanage-import.8*
-%{_mandir}/ru/man8/semanage-interface.8*
-%{_mandir}/ru/man8/semanage-login.8*
-%{_mandir}/ru/man8/semanage-module.8*
-%{_mandir}/ru/man8/semanage-node.8*
-%{_mandir}/ru/man8/semanage-permissive.8*
-%{_mandir}/ru/man8/semanage-port.8*
-%{_mandir}/ru/man8/semanage-user.8*
-%{_mandir}/ru/man8/semodule_unpackage.8*
-%{_mandir}/ru/man8/sepolgen.8*
-%{_mandir}/ru/man8/sepolicy-booleans.8*
-%{_mandir}/ru/man8/sepolicy-communicate.8*
-%{_mandir}/ru/man8/sepolicy-generate.8*
-%{_mandir}/ru/man8/sepolicy-gui.8*
-%{_mandir}/ru/man8/sepolicy-interface.8*
-%{_mandir}/ru/man8/sepolicy-manpage.8*
-%{_mandir}/ru/man8/sepolicy-network.8*
-%{_mandir}/ru/man8/sepolicy-transition.8*
-%{_mandir}/ru/man8/sepolicy.8*
+
+
+%{!?_licensedir:%global license %%doc}
+%license policycoreutils/LICENS
 
 %files
-%license policycoreutils/COPYING
 %{_sbindir}/restorecon
 %{_sbindir}/restorecon_xattr
 %{_sbindir}/fixfiles
@@ -302,41 +261,27 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{generatorsdir}/selinux-autorelabel-generator.sh
 %config(noreplace) %{_sysconfdir}/sestatus.conf
 %{_mandir}/man5/selinux_config.5.gz
-%{_mandir}/ru/man5/selinux_config.5.gz
 %{_mandir}/man5/sestatus.conf.5.gz
-%{_mandir}/ru/man5/sestatus.conf.5.gz
 %{_mandir}/man8/fixfiles.8*
-%{_mandir}/ru/man8/fixfiles.8*
 %{_mandir}/man8/load_policy.8*
-%{_mandir}/ru/man8/load_policy.8*
 %{_mandir}/man8/restorecon.8*
-%{_mandir}/ru/man8/restorecon.8*
 %{_mandir}/man8/restorecon_xattr.8*
-%{_mandir}/ru/man8/restorecon_xattr.8*
 %{_mandir}/man8/semodule.8*
-%{_mandir}/ru/man8/semodule.8*
 %{_mandir}/man8/sestatus.8*
-%{_mandir}/ru/man8/sestatus.8*
 %{_mandir}/man8/setfiles.8*
-%{_mandir}/ru/man8/setfiles.8*
 %{_mandir}/man8/setsebool.8*
-%{_mandir}/ru/man8/setsebool.8*
 %{_mandir}/man1/secon.1*
-%{_mandir}/ru/man1/secon.1*
 %{_mandir}/man8/genhomedircon.8*
-%{_mandir}/ru/man8/genhomedircon.8*
 %{_mandir}/man8/semodule_expand.8*
-%{_mandir}/ru/man8/semodule_expand.8*
 %{_mandir}/man8/semodule_link.8*
-%{_mandir}/ru/man8/semodule_link.8*
 %{_mandir}/man8/semodule_unpackage.8*
-%{_mandir}/ru/man8/semodule_unpackage.8*
 %{_mandir}/man8/semodule_package.8*
-%{_mandir}/ru/man8/semodule_package.8*
 %dir %{_datadir}/bash-completion
 %{_datadir}/bash-completion/completions/setsebool
+
+%{!?_licensedir:%global license %%doc}
+%license policycoreutils/LICENSE
 %doc %{_usr}/share/doc/%{name}
-%{_datadir}/locale/*
 
 %post
 %systemd_post selinux-autorelabel-mark.service
