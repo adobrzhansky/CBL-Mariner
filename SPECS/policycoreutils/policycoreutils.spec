@@ -164,7 +164,6 @@ BuildRequires:  systemd
 The policycoreutils-restorecond package contains the restorecond service.
 
 %files python-utils
-%license python/COPYING
 %{_sbindir}/semanage
 %{_bindir}/chcat
 %{_bindir}/audit2allow
@@ -176,7 +175,6 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_datadir}/bash-completion/completions/semanage
 
 %files python3
-%license python/COPYING
 %{python3_sitelib}/__pycache__
 %{python3_sitelib}/seobject.py*
 %{python3_sitelib}/sepolgen
@@ -223,7 +221,6 @@ The policycoreutils-restorecond package contains the restorecond service.
 %config(noreplace) %{_sysconfdir}/pam.d/newrole
 
 %files restorecond
-%license restorecond/COPYING
 %{_sbindir}/restorecond
 %{_unitdir}/restorecond.service
 %{_libdir}/systemd/user/restorecond_user.service
