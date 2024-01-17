@@ -1,9 +1,51 @@
 %global security_hardening nofortify
 %define _use_internal_dependency_generator 0
+
+# Overriding the default to call 'configure' from subdirectories.
+%global _configure ../configure
+
+# Where the binaries aimed at gcc will live (ie. /usr/<target>/bin/).
+%global auxbin_prefix %{_exec_prefix}
+
+%ifarch x86_64
+    %global build_cross 1
+%else
+    %global build_cross 0
+%endif
+
+%global build_aarch64 %{build_cross}
+
+%global do_exclude() \
+%if %2 \
+%exclude %{_bindir}/%{1}* \
+%exclude %{_libdir}/gcc/%{1} \
+%exclude %{_libexecdir}/gcc/%{1} \
+%exclude %{_prefix}/%{1}/sys-root/ \
+%endif
+
+%global do_files() \
+%if %2 \
+%files -n gcc-%1 \
+%{_bindir}/%{1}*-cpp \
+%{_bindir}/%{1}*-gcc \
+%{_bindir}/%{1}*-gcc-ar \
+%{_bindir}/%{1}*-gcc-nm \
+%{_bindir}/%{1}*-gcc-ranlib \
+%{_bindir}/%{1}*-gcov* \
+%{_bindir}/%{1}*-lto-dump \
+%{_libdir}/gcc/%{1} \
+%{_libexecdir}/gcc/%{1} \
+%{_prefix}/%{1}/sys-root/ \
+\
+%files -n gcc-c++-%1 \
+%{_bindir}/%{1}*-c++ \
+%{_bindir}/%{1}*-g++ \
+%endif
+
 Summary:        Contains the GNU compiler collection
 Name:           gcc
 Version:        11.2.0
-Release:        7%{?dist}
+Release:        8%{?dist}
 License:        GPLv2+
 Vendor:         Microsoft Corporation
 Distribution:   Mariner
@@ -11,6 +53,11 @@ Group:          Development/Tools
 URL:            https://gcc.gnu.org/
 Source0:        https://ftp.gnu.org/gnu/gcc/%{name}-%{version}/%{name}-%{version}.tar.xz
 Patch0:         CVE-2023-4039.patch
+
+BuildRequires:  gmp-devel
+BuildRequires:  mpfr-devel
+BuildRequires:  libmpc-devel
+
 Requires:       gcc-c++ = %{version}-%{release}
 Requires:       gmp
 Requires:       libgcc-atomic = %{version}-%{release}
@@ -39,10 +86,35 @@ Provides:       libubsan-static%{?_isa} = %{version}-%{release}
 Provides:       libquadmath = %{version}-%{release}
 Provides:       libquadmath-devel = %{version}-%{release}
 Provides:       libquadmath-devel%{?_isa} = %{version}-%{release}
-#%if %{with_check}
-#BuildRequires:  autogen
-#BuildRequires:  dejagnu
-#%endif
+
+# Moving macro before the "SourceX" tags breaks PR checks parsing the specs.
+%global do_package() \
+%if %2 \
+%package -n gcc-%1 \
+Summary: Cross-build binary utilities for %1 \
+Requires: cross-gcc-common == %{version}-%{release} \
+BuildRequires: binutils-%1 \
+Requires: binutils-%1 \
+Requires: gmp-devel \
+Requires: mpfr-devel \
+Requires: libmpc-devel \
+%description -n gcc-%1 \
+Cross-build GNU C compiler. \
+\
+Only building kernels is currently supported.  Support for cross-building \
+user space programs is not currently provided as that would massively multiply \
+the number of packages. \
+\
+%package -n gcc-c++-%1 \
+Summary: Cross-build binary utilities for %1 \
+Requires: gcc-%1 == %{version}-%{release} \
+%description -n gcc-c++-%1 \
+Cross-build GNU C++ compiler. \
+\
+Only the compiler is provided; not libstdc++.  Support for cross-building \
+user space programs is not currently provided as that would massively multiply \
+the number of packages. \
+%endif
 
 %description
 The GCC package contains the GNU compiler collection,
@@ -136,12 +208,92 @@ Requires:       libgomp = %{version}-%{release}
 An implementation of OpenMP for the C, C++, and Fortran 95 compilers in the GNU Compiler Collection.
 This package contains development headers and static library for libgomp
 
+%if %{build_cross}
+%package -n cross-gcc-common
+Summary: Cross-build GNU C compiler documentation and translation files
+BuildArch: noarch
+
+%description -n cross-gcc-common
+Documentation, manual pages and translation files for cross-build GNU C
+compiler.
+
+This is the common part of a set of cross-build GNU C compiler packages for
+building kernels for other architectures.  No support for cross-building
+user space programs is currently supplied as that would massively multiply the
+number of packages.
+%endif
+
+%do_package aarch64-linux-gnu %{build_aarch64}
+
 %prep
 %autosetup -p1
+
+function prep_target () {
+    local target=$1
+    local condition=$2
+
+    if [ $condition != 0 ]
+    then
+        echo $1 >> cross.list
+    fi
+}
+
+touch cross.list
+prep_target aarch64-linux-gnu %{build_aarch64}
+
 # disable no-pie for gcc binaries
 sed -i '/^NO_PIE_CFLAGS = /s/@NO_PIE_CFLAGS@//' gcc/Makefile.in
 
 %build
+function config_cross_target () {
+    local target=$1
+
+    mkdir $target
+    pushd $target
+
+    CFLAGS_FOR_TARGET="-g -O2 -Wall -fexceptions" \
+    AR_FOR_TARGET=%{_bindir}/$target-ar \
+    AS_FOR_TARGET=%{_bindir}/$target-as \
+    LD_FOR_TARGET=%{_bindir}/$target-ld \
+    NM_FOR_TARGET=%{_bindir}/$target-nm \
+    OBJDUMP_FOR_TARGET=%{_bindir}/$target-objdump \
+    RANLIB_FOR_TARGET=%{_bindir}/$target-ranlib \
+    READELF_FOR_TARGET=%{_bindir}/$target-readelf \
+    STRIP_FOR_TARGET=%{_bindir}/$target-strip \
+    SED=sed %configure \
+        --disable-bootstrap \
+        --disable-decimal-float \
+        --disable-dependency-tracking \
+        --disable-gold \
+        --disable-libgcj \
+        --disable-libgomp \
+        --disable-libmpx \
+        --disable-libquadmath \
+        --disable-libssp \
+        --disable-libunwind-exceptions \
+        --disable-multilib \
+        --disable-silent-rules \
+        --disable-sjlj-exceptions \
+        --disable-threads \
+        --enable-plugin \
+        --enable-__cxa_atexit \
+        --enable-clocale=gnu \
+        --enable-default-pie \
+        --enable-languages=c,c++ \
+        --enable-linker-build-id \
+        --enable-shared \
+        --enable-targets=all \
+        --program-prefix=$target- \
+        --target=$target \
+        --with-ld=/usr/bin/$target-ld \
+        --with-newlib \
+        --with-sysroot=%{_prefix}/$target/sys-root \
+        --with-system-zlib \
+        --without-headers
+
+    popd
+}
+
 CFLAGS="`echo " %{build_cflags} " | sed 's/-Werror=format-security/-Wno-error=format-security/'`"
 CXXFLAGS="`echo " %{build_cxxflags} " | sed 's/-Werror=format-security/-Wno-error=format-security/'`"
 FCFLAGS="`echo " %{build_fflags} " | sed 's/-Werror=format-security/-Wno-error=format-security/'`"
@@ -149,22 +301,37 @@ export CFLAGS
 export CXXFLAGS
 export FCFLAGS
 
+mkdir build
+pushd build
+
 SED=sed \
 %configure \
-    --enable-shared \
-    --enable-threads=posix \
+    --disable-bootstrap \
+    --disable-multilib \
     --enable-__cxa_atexit \
     --enable-clocale=gnu \
+    --enable-default-pie \
     --enable-languages=c,c++,fortran \
-    --disable-multilib \
-    --disable-bootstrap \
     --enable-linker-build-id \
     --enable-plugin \
-    --enable-default-pie \
+    --enable-shared \
+    --enable-threads=posix \
     --with-system-zlib
-make %{?_smp_mflags}
+
+popd
+
+make -C build %{?_smp_mflags}
+
+while read -r target
+do
+    echo "=== BUILD cross-compilation target $target ==="
+    config_cross_target $target
+    make -C $target %{_smp_mflags} tooldir=%{_prefix} all-gcc
+done < cross.list
 
 %install
+pushd build
+
 make %{?_smp_mflags} DESTDIR=%{buildroot} install
 install -vdm 755 %{buildroot}/%{_libdir}
 ln -sv %{_bindir}/cpp %{buildroot}/%{_libdir}
@@ -174,14 +341,29 @@ mv -v %{buildroot}%{_lib64dir}/*gdb.py %{buildroot}%{_datarootdir}/gdb/auto-load
 chmod 755 %{buildroot}/%{_lib64dir}/libgcc_s.so.1
 
 # Install libbacktrace-static components
-mv %{_host}/libbacktrace/.libs/libbacktrace.a %{buildroot}%{_lib64dir}
-mv libbacktrace/backtrace.h %{buildroot}%{_includedir}
+cp %{_host}/libbacktrace/.libs/libbacktrace.a %{buildroot}%{_lib64dir}
+cp ../libbacktrace/backtrace.h %{buildroot}%{_includedir}
+
+%find_lang %{name} --all-name
+
+popd
+
+while read -r target
+do
+    echo "=== INSTALL cross-compilation target $target ==="
+
+    mkdir -p %{buildroot}%{_prefix}/$target/sys-root
+    make -C $target %{?_smp_mflags} DESTDIR=%{buildroot} install-gcc
+    rm -rf %{buildroot}%{_mandir}/man1/$target-*
+done < cross.list
 
 rm -rf %{buildroot}%{_infodir}
-%find_lang %{name} --all-name
 
 %check
 ulimit -s 32768
+
+pushd build
+
 # disable PCH tests is ASLR is on (due to bug in pch)
 test `cat /proc/sys/kernel/randomize_va_space` -ne 0 && rm gcc/testsuite/gcc.dg/pch/pch.exp
 # disable security hardening for tests
@@ -197,7 +379,7 @@ $tests_ok
 %post   -p /sbin/ldconfig
 %postun -p /sbin/ldconfig
 
-%files -f %{name}.lang
+%files -f build/%{name}.lang
 %defattr(-,root,root)
 %license COPYING
 %{_libdir}/cpp
@@ -229,6 +411,8 @@ $tests_ok
 %exclude %{_lib64dir}/libgomp*
 %exclude %{_lib64dir}/libstdc++*
 %exclude %{_lib64dir}/libsupc++*
+
+%do_exclude aarch64-linux-gnu %{build_aarch64}
 
 %files -n gfortran
 %defattr(-,root,root)
@@ -288,7 +472,18 @@ $tests_ok
 %{_lib64dir}/libgomp.so
 %{_lib64dir}/libgomp.spec
 
+%if %{build_cross}
+%files -n cross-gcc-common
+%license COPYING
+%endif
+
+%do_files aarch64-linux-gnu %{build_aarch64}
+
 %changelog
+* Mon Dec 11 2023 Pawel Winogrodzki <pawelwi@microsoft.com> - 11.2.0-8
+- Added cross-compilation support for aarch64.
+- Used Fedora 36 spec (license: MIT) for guidance.
+
 * Tue Sep 26 2023 Pawel Winogrodzki <pawelwi@microsoft.com> - 11.2.0-7
 - Removing 'exit' calls from the '%%check' section.
 
