@@ -4,8 +4,8 @@
 
 Summary:        A fast multidimensional array facility for Python
 Name:           numpy
-Version:        1.23.4
-Release:        3%{?dist}
+Version:        1.25.2
+Release:        1%{?dist}
 # Everything is BSD except for class SafeEval in numpy/lib/utils.py which is Python
 License:        BSD AND Python AND ASL 2.0
 Vendor:         Microsoft Corporation
@@ -14,7 +14,7 @@ URL:            http://www.numpy.org/
 Source0:        https://github.com/%{name}/%{name}/releases/download/v%{version}/%{name}-%{version}.tar.gz
 Source1:        https://numpy.org/doc/%{majmin}/numpy-html.zip#/numpy-html-%{version}.zip
 
-Patch0:         test_fix.patch
+#Patch0:         test_fix.patch
 
 %description
 NumPy is a general-purpose array-processing package designed to
@@ -183,6 +183,9 @@ python3 runtests.py --no-build -- -ra -k 'not test_ppc64_ibm_double_double128'
 %doc docs/*
 
 %changelog
+* Fri Jan 19 2024 Osama Esmail <osamaesmail@microsoft.com> - 1.25.2-1
+- Upgrading versions before 3.0 release
+
 * Mon May 22 2023 Olivia Crain <oliviacrain@microsoft.com> - 1.23.4-3
 - Pin version of hypothesis used to avoid deprecation errors
 
