@@ -1,0 +1,6 @@
+--2024-01-19 14:13:44--  https://numpy.org/doc/1.25.zip
+Resolving numpy.org (numpy.org)... 172.67.185.160, 104.21.19.75, 2606:4700:3031::ac43:b9a0, ...
+Connecting to numpy.org (numpy.org)|172.67.185.160|:443... connected.
+HTTP request sent, awaiting response... 404 Not Found
+2024-01-19 14:13:45 ERROR 404: Not Found.
+
