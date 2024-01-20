@@ -468,7 +468,7 @@ func createIsoImage(buildDir, sourceImageFile, outputImageDir, outputImageBase s
 
 	logger.Log.Infof("--imagecustomizer.go - connecting to customized raw image (%s)", sourceImageFile)
 
-	imageConnection, mountPoints, err := connectToExistingImage(sourceImageFile, buildDir, "imageroot")
+	imageConnection, mountPoints, err := connectToExistingImage(sourceImageFile, buildDir, "imageroot", true)
 	if err != nil {
 		return err
 	}

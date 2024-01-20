@@ -98,7 +98,7 @@ func (iae* IsoArtifactExtractor) generateInitrd(writeableRootfsImage string, iso
 	initrdFileWithinBuildMachine := filepath.Join(writeableRootfsMountFullDir, initrdFileWithinRWImage)
 
 	// connect
-	writeableRootfsConnection, _, err := connectToExistingImage(writeableRootfsImage, iae.tmpDir, writeableRootfsMountDir)
+	writeableRootfsConnection, _, err := connectToExistingImage(writeableRootfsImage, iae.tmpDir, writeableRootfsMountDir, true)
 	if err != nil {
 		return err
 	}
