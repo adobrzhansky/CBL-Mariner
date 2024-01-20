@@ -47,10 +47,12 @@ Requires:       libsepol >= %{libsepolver}
 Requires:       rpm
 Requires:       sed
 Requires:       util-linux
+Requires:       %{name}-basic = %{version}-%{release}
 Conflicts:      initscripts < 9.66
 Obsoletes:      policycoreutils < 2.0.61-2
 Provides:       /sbin/fixfiles
 Provides:       /sbin/restorecon
+
 
 %description
 Security-enhanced Linux is a feature of the Linux® kernel and a number
@@ -113,6 +115,11 @@ install -m 644 -p %{SOURCE3} %{buildroot}%{_unitdir}/
 install -m 644 -p %{SOURCE4} %{buildroot}%{_unitdir}/
 install -m 755 -p %{SOURCE5} %{buildroot}%{generatorsdir}/
 
+%package basic
+Summary:       Basic tools from policycoreutils package
+
+%description basic
+basic tools
 
 %package python-utils
 Summary:        SELinux policy core python utilities
@@ -193,7 +200,7 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{python3_sitelib}/sepolicy/sepolicy.glade
 %{python3_sitelib}/sepolicy/transition.py*
 %{python3_sitelib}/sepolicy/sedbus.py*
-%{python3_sitelib}/sepolicy*.egg-info
+%{python3_sitelib}/sepolicy*.dist-info/
 %{python3_sitelib}/sepolicy/__pycache__
 %{_mandir}/man8/sepolicy-gui.8.gz
 
@@ -230,33 +237,31 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_datadir}/dbus-1/services/org.selinux.Restorecond.service
 %{_mandir}/man8/restorecond.8*
 
-
-%{!?_licensedir:%global license %%doc}
-%license policycoreutils/LICENS
-
-%files
+%files basic
 %{_sbindir}/restorecon
 %{_sbindir}/restorecon_xattr
-%{_sbindir}/fixfiles
 %{_sbindir}/setfiles
 %{_sbindir}/load_policy
+%{_sbindir}/sestatus
+%{_bindir}/sestatus
+%config(noreplace) %{_sysconfdir}/sestatus.conf
+
+%files
+%{_sbindir}/fixfiles
 %{_sbindir}/genhomedircon
 %{_sbindir}/setsebool
 %{_sbindir}/semodule
-%{_sbindir}/sestatus
 %{_bindir}/secon
 %{_bindir}/semodule_expand
 %{_bindir}/semodule_link
 %{_bindir}/semodule_package
 %{_bindir}/semodule_unpackage
-%{_bindir}/sestatus
 %{_libexecdir}/selinux/hll
 %{_libexecdir}/selinux/selinux-autorelabel
 %{_unitdir}/selinux-autorelabel-mark.service
 %{_unitdir}/selinux-autorelabel.service
 %{_unitdir}/selinux-autorelabel.target
 %{generatorsdir}/selinux-autorelabel-generator.sh
-%config(noreplace) %{_sysconfdir}/sestatus.conf
 %{_mandir}/man5/selinux_config.5.gz
 %{_mandir}/man5/sestatus.conf.5.gz
 %{_mandir}/man8/fixfiles.8*
@@ -275,10 +280,8 @@ The policycoreutils-restorecond package contains the restorecond service.
 %{_mandir}/man8/semodule_package.8*
 %dir %{_datadir}/bash-completion
 %{_datadir}/bash-completion/completions/setsebool
-
-%{!?_licensedir:%global license %%doc}
-%license policycoreutils/LICENSE
 %doc %{_usr}/share/doc/%{name}
+%{_datadir}/locale/*
 
 %post
 %systemd_post selinux-autorelabel-mark.service
@@ -296,6 +299,10 @@ The policycoreutils-restorecond package contains the restorecond service.
 %systemd_postun_with_restart restorecond.service
 
 %changelog
+* Fri Jan 15 2024 Elaheh Dehghani <edehghani@microsoft.com> - 3.6-1
+- Upgrade to 3.6 - Azure Linux 3.0 - package upgrades
+- Add a subpackage for basic tools
+
 * Fri Aug 13 2021 Thomas Crain <thcrain@microsoft.com> - 3.2-1
 - Upgrade to latest upstream version
 - Switch source to use upstream's combined tarball
