@@ -47,6 +47,22 @@ type MountPoint struct {
 	mountBeforeDefaults bool
 }
 
+func (m *MountPoint) GetSource() string {
+	return m.source
+}
+
+func (m *MountPoint) GetTarget() string {
+	return m.target
+}
+
+func (m *MountPoint) GetFSType() string {
+	return m.fstype
+}
+
+func (m *MountPoint) GetData() string {
+	return m.data
+}
+
 // Chroot represents a Chroot environment with automatic synchronization protections
 // and guaranteed cleanup code even on SIGTERM so long as registerSIGTERMCleanup is invoked.
 type Chroot struct {
